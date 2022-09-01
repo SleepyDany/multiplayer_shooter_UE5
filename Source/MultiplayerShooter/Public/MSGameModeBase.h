@@ -13,4 +13,8 @@ UCLASS()
 class MULTIPLAYERSHOOTER_API AMSGameModeBase : public AGameModeBase
 {
     GENERATED_BODY()
+
+public:
+
+    AMSGameModeBase();
 };
