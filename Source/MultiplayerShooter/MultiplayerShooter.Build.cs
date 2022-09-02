@@ -17,7 +17,8 @@ public class MultiplayerShooter : ModuleRules
 			"MultiplayerShooter/Public/Player", 
 			"MultiplayerShooter/Public/Components",
 			"MultiplayerShooter/Public/Dev",
-			"MultiplayerShooter/Public/Weapon"
+			"MultiplayerShooter/Public/Weapon",
+			"MultiplayerShooter/Public/UI"
 		});
 
 		// Uncomment if you are using Slate UI

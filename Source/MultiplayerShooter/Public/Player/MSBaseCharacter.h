@@ -10,7 +10,7 @@ class UCameraComponent;
 class USpringArmComponent;
 class UMSHealthComponent;
 class UTextRenderComponent;
-class AMSBaseWeapon;
+class UMSWeaponComponent;
 
 UCLASS()
 class MULTIPLAYERSHOOTER_API AMSBaseCharacter : public ACharacter
@@ -31,14 +31,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
 	USpringArmComponent* SpringArmComponent;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	TSubclassOf<AMSBaseWeapon> WeaponClass;
-
     UPROPERTY(EditDefaultsOnly, Category = "Components")
 	UMSHealthComponent* HealthComponent;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UTextRenderComponent* HealthTextComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UMSWeaponComponent* WeaponComponent;
 
 public:	
 	
@@ -51,5 +51,6 @@ private:
 	void MoveForward(float Amount);
 	void MoveRight(float Amount);
 
-	void SpawnWeapon();
+	void OnDeath();
+	void OnHealthChanged(float Health);
 };

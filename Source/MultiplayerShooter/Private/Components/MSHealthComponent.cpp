@@ -9,7 +9,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogHealthComponent, All, All)
 UMSHealthComponent::UMSHealthComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-
 }
 
 void UMSHealthComponent::BeginPlay()
@@ -17,6 +16,7 @@ void UMSHealthComponent::BeginPlay()
 	Super::BeginPlay();
 
 	Health = MaxHealth;
+	OnHealthChanged.Broadcast(Health);
 
 	AActor* ComponentOwner = GetOwner();
 	if (ComponentOwner)
@@ -27,6 +27,14 @@ void UMSHealthComponent::BeginPlay()
 
 void UMSHealthComponent::OnTakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
-	UE_LOG(LogHealthComponent, Display, TEXT("Damage: %f"), Damage);
-	Health -= Damage;
+	if (Damage <= 0.0f || IsDead())
+		return;
+	
+	Health = FMath::Clamp(Health - Damage, 0.0f, MaxHealth);
+	OnHealthChanged.Broadcast(Health);
+
+	if (IsDead())
+	{
+		OnDeath.Broadcast();
+	}
 }

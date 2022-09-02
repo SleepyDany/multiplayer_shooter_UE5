@@ -6,7 +6,8 @@
 #include "Components/ActorComponent.h"
 #include "MSHealthComponent.generated.h"
 
-
+DECLARE_MULTICAST_DELEGATE(FOnDeath)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MULTIPLAYERSHOOTER_API UMSHealthComponent : public UActorComponent
@@ -18,6 +19,14 @@ public:
 	UMSHealthComponent();
 
 	float GetHealth() const { return Health; }
+
+	float GetMaxHealth() const { return MaxHealth; }
+
+	UFUNCTION(BlueprintCallable)
+	bool IsDead() const { return Health <= 0.0f; }
+
+	FOnDeath OnDeath;
+	FOnHealthChanged OnHealthChanged;
 
 protected:
 

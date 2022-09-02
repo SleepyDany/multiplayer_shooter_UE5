@@ -7,7 +7,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/MSHealthComponent.h"
 #include "Components/TextRenderComponent.h"
-#include "Weapon/MSBaseWeapon.h"
+#include "Components/MSCharacterMovementComponent.h"
+#include "Components/MSWeaponComponent.h"
+#include "Player/MSPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseCharacter, All, All)
 
@@ -18,7 +20,7 @@ AMSBaseCharacter::AMSBaseCharacter()
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>("SpringArmComponent");
 	SpringArmComponent->SetupAttachment(GetRootComponent());
 	SpringArmComponent->bUsePawnControlRotation = true;
-	SpringArmComponent->SocketOffset = { 0.0f, 0.0f, 70.0f };
+	SpringArmComponent->SocketOffset = { 50.0f, -60.0f, 90.0f };
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("CameraComponent");
 	CameraComponent->SetupAttachment(SpringArmComponent);
@@ -26,6 +28,9 @@ AMSBaseCharacter::AMSBaseCharacter()
 	HealthComponent = CreateDefaultSubobject<UMSHealthComponent>("HealtComponent");
 	HealthTextComponent = CreateDefaultSubobject<UTextRenderComponent>("HealthTextComponent");
 	HealthTextComponent->SetupAttachment(GetRootComponent());
+	HealthTextComponent->SetOnlyOwnerSee(true);
+
+	WeaponComponent = CreateDefaultSubobject<UMSWeaponComponent>("WeaponComponent");
 }
 
 void AMSBaseCharacter::BeginPlay()
@@ -34,21 +39,24 @@ void AMSBaseCharacter::BeginPlay()
 	
 	check(HealthComponent);
 	check(HealthTextComponent);
+	check(GetCharacterMovement());
 
-	SpawnWeapon();
+	OnHealthChanged(HealthComponent->GetHealth());
+	HealthComponent->OnDeath.AddUObject(this, &AMSBaseCharacter::OnDeath);
+	HealthComponent->OnHealthChanged.AddUObject(this, &AMSBaseCharacter::OnHealthChanged);
 }
 
 void AMSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	const auto Health = HealthComponent->GetHealth();
-	HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), Health)));
 }
 
 void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	check(PlayerInputComponent);
+	check(WeaponComponent);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMSBaseCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMSBaseCharacter::MoveRight);
@@ -56,6 +64,7 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis("TurnAround", this, &AMSBaseCharacter::AddControllerYawInput);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMSBaseCharacter::Jump);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, WeaponComponent, &UMSWeaponComponent::Fire);
 }
 
 void AMSBaseCharacter::MoveForward(float Amount)
@@ -68,15 +77,31 @@ void AMSBaseCharacter::MoveRight(float Amount)
     AddMovementInput(GetActorRightVector(), Amount);
 }
 
-void AMSBaseCharacter::SpawnWeapon()
+void AMSBaseCharacter::OnDeath()
 {
-	if (!GetWorld())
-		return;
+	UE_LOG(LogBaseCharacter, Display, TEXT("Dead!"));
 
-	const auto Weapon = GetWorld()->SpawnActor<AMSBaseWeapon>(WeaponClass);
-	if (Weapon)
+	GetCharacterMovement()->DisableMovement();
+	
+	FText text = FText::FromString(TEXT("DEAD"));
+
+	HealthTextComponent->SetText(text);
+	HealthTextComponent->SetTextRenderColor(FColor::Red);
+
+	SetLifeSpan(2.5f);
+
+	if (Controller)
 	{
-		FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, false);
-		Weapon->AttachToComponent(GetMesh(), AttachmentRules, "WeaponSocket");
+		Controller->ChangeState(NAME_Spectating);
 	}
+}
+
+void AMSBaseCharacter::OnHealthChanged(float Health)
+{
+	const float color_param = Health / HealthComponent->GetMaxHealth();
+
+	FLinearColor color = FLinearColor::Red * (1 - color_param) + FLinearColor::Green * color_param;
+
+	HealthTextComponent->SetTextRenderColor(color.ToFColor(true));
+	HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), Health)));
 }
