@@ -6,9 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MSCharacterMovementComponent.generated.h"
 
-/**
- * 
- */
+
+
 UCLASS()
 class MULTIPLAYERSHOOTER_API UMSCharacterMovementComponent : public UCharacterMovementComponent
 {

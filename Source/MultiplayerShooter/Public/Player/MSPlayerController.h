@@ -6,9 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "MSPlayerController.generated.h"
 
-/**
- * 
- */
+
+
 UCLASS()
 class MULTIPLAYERSHOOTER_API AMSPlayerController : public APlayerController
 {

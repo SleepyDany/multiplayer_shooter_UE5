@@ -16,6 +16,7 @@ public class MultiplayerShooter : ModuleRules
 		{
 			"MultiplayerShooter/Public/Player", 
 			"MultiplayerShooter/Public/Components",
+			"MultiplayerShooter/Public/Dev",
 			"MultiplayerShooter/Public/Weapon"
 		});
 

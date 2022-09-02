@@ -8,6 +8,8 @@
 
 class UCameraComponent;
 class USpringArmComponent;
+class UMSHealthComponent;
+class UTextRenderComponent;
 class AMSBaseWeapon;
 
 UCLASS()
@@ -16,11 +18,11 @@ class MULTIPLAYERSHOOTER_API AMSBaseCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
+
 	AMSBaseCharacter();
 
 protected:
-	// Called when the game starts or when spawned
+	
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
@@ -32,11 +34,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<AMSBaseWeapon> WeaponClass;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Components")
+	UMSHealthComponent* HealthComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UTextRenderComponent* HealthTextComponent;
+
 public:	
-	// Called every frame
+	
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:

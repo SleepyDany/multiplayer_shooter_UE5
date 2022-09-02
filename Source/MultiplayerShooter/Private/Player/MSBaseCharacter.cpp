@@ -5,12 +5,14 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Components/MSHealthComponent.h"
+#include "Components/TextRenderComponent.h"
 #include "Weapon/MSBaseWeapon.h"
 
-// Sets default values
+DEFINE_LOG_CATEGORY_STATIC(LogBaseCharacter, All, All)
+
 AMSBaseCharacter::AMSBaseCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>("SpringArmComponent");
@@ -20,24 +22,30 @@ AMSBaseCharacter::AMSBaseCharacter()
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("CameraComponent");
 	CameraComponent->SetupAttachment(SpringArmComponent);
+
+	HealthComponent = CreateDefaultSubobject<UMSHealthComponent>("HealtComponent");
+	HealthTextComponent = CreateDefaultSubobject<UTextRenderComponent>("HealthTextComponent");
+	HealthTextComponent->SetupAttachment(GetRootComponent());
 }
 
-// Called when the game starts or when spawned
 void AMSBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	check(HealthComponent);
+	check(HealthTextComponent);
+
 	SpawnWeapon();
 }
 
-// Called every frame
 void AMSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	const auto Health = HealthComponent->GetHealth();
+	HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), Health)));
 }
 
-// Called to bind functionality to input
 void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
