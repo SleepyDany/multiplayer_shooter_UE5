@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Weapon/MSBaseWeapon.h"
 
 // Sets default values
 AMSBaseCharacter::AMSBaseCharacter()
@@ -26,6 +27,7 @@ void AMSBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	SpawnWeapon();
 }
 
 // Called every frame
@@ -44,6 +46,8 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMSBaseCharacter::MoveRight);
 	PlayerInputComponent->BindAxis("LookUp", this, &AMSBaseCharacter::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("TurnAround", this, &AMSBaseCharacter::AddControllerYawInput);
+
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMSBaseCharacter::Jump);
 }
 
 void AMSBaseCharacter::MoveForward(float Amount)
@@ -54,4 +58,17 @@ void AMSBaseCharacter::MoveForward(float Amount)
 void AMSBaseCharacter::MoveRight(float Amount)
 {
     AddMovementInput(GetActorRightVector(), Amount);
+}
+
+void AMSBaseCharacter::SpawnWeapon()
+{
+	if (!GetWorld())
+		return;
+
+	const auto Weapon = GetWorld()->SpawnActor<AMSBaseWeapon>(WeaponClass);
+	if (Weapon)
+	{
+		FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, false);
+		Weapon->AttachToComponent(GetMesh(), AttachmentRules, "WeaponSocket");
+	}
 }
