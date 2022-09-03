@@ -3,6 +3,8 @@
 
 #include "Components/MSHealthComponent.h"
 #include "GameFramework/Actor.h"
+#include <Engine/Engine.h>
+#include <Net/UnrealNetwork.h>
 
 DEFINE_LOG_CATEGORY_STATIC(LogHealthComponent, All, All)
 
@@ -11,12 +13,24 @@ UMSHealthComponent::UMSHealthComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+void UMSHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UMSHealthComponent, Health);
+}
+
+void UMSHealthComponent::OnRep_Health()
+{
+	OnHealthChanged.Broadcast();
+}
+
 void UMSHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
 	Health = MaxHealth;
-	OnHealthChanged.Broadcast(Health);
+	OnHealthChanged.Broadcast();
 
 	AActor* ComponentOwner = GetOwner();
 	if (ComponentOwner)
@@ -30,11 +44,19 @@ void UMSHealthComponent::OnTakeAnyDamage(AActor* DamagedActor, float Damage, con
 	if (Damage <= 0.0f || IsDead())
 		return;
 	
-	Health = FMath::Clamp(Health - Damage, 0.0f, MaxHealth);
-	OnHealthChanged.Broadcast(Health);
+	SetHealth(Health - Damage);
 
 	if (IsDead())
 	{
 		OnDeath.Broadcast();
+	}
+}
+
+void UMSHealthComponent::SetHealth(float HealthValue)
+{
+	if (GetOwner()->GetLocalRole() == ROLE_Authority)
+	{
+		Health = FMath::Clamp(HealthValue, 0.0f, MaxHealth);
+		OnHealthChanged.Broadcast();
 	}
 }

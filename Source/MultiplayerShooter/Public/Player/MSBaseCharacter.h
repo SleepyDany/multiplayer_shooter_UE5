@@ -52,5 +52,5 @@ private:
 	void MoveRight(float Amount);
 
 	void OnDeath();
-	void OnHealthChanged(float Health);
+	void OnHealthChanged();
 };

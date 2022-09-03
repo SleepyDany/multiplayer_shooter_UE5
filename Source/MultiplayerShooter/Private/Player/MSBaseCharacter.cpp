@@ -9,6 +9,7 @@
 #include "Components/TextRenderComponent.h"
 #include "Components/MSCharacterMovementComponent.h"
 #include "Components/MSWeaponComponent.h"
+#include <Components/CapsuleComponent.h>
 #include "Player/MSPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseCharacter, All, All)
@@ -28,7 +29,7 @@ AMSBaseCharacter::AMSBaseCharacter()
 	HealthComponent = CreateDefaultSubobject<UMSHealthComponent>("HealtComponent");
 	HealthTextComponent = CreateDefaultSubobject<UTextRenderComponent>("HealthTextComponent");
 	HealthTextComponent->SetupAttachment(GetRootComponent());
-	HealthTextComponent->SetOnlyOwnerSee(true);
+	//HealthTextComponent->SetOnlyOwnerSee(true);
 
 	WeaponComponent = CreateDefaultSubobject<UMSWeaponComponent>("WeaponComponent");
 }
@@ -41,7 +42,7 @@ void AMSBaseCharacter::BeginPlay()
 	check(HealthTextComponent);
 	check(GetCharacterMovement());
 
-	OnHealthChanged(HealthComponent->GetHealth());
+	OnHealthChanged();
 	HealthComponent->OnDeath.AddUObject(this, &AMSBaseCharacter::OnDeath);
 	HealthComponent->OnHealthChanged.AddUObject(this, &AMSBaseCharacter::OnHealthChanged);
 }
@@ -79,29 +80,30 @@ void AMSBaseCharacter::MoveRight(float Amount)
 
 void AMSBaseCharacter::OnDeath()
 {
-	UE_LOG(LogBaseCharacter, Display, TEXT("Dead!"));
-
 	GetCharacterMovement()->DisableMovement();
 	
 	FText text = FText::FromString(TEXT("DEAD"));
 
 	HealthTextComponent->SetText(text);
 	HealthTextComponent->SetTextRenderColor(FColor::Red);
+	HealthTextComponent->SetOnlyOwnerSee(false);
 
-	SetLifeSpan(2.5f);
+	SetLifeSpan(1.5f);
 
 	if (Controller)
 	{
 		Controller->ChangeState(NAME_Spectating);
 	}
+
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 }
 
-void AMSBaseCharacter::OnHealthChanged(float Health)
+void AMSBaseCharacter::OnHealthChanged()
 {
-	const float color_param = Health / HealthComponent->GetMaxHealth();
+	const float color_param = HealthComponent->GetHealth() / HealthComponent->GetMaxHealth();
 
 	FLinearColor color = FLinearColor::Red * (1 - color_param) + FLinearColor::Green * color_param;
 
 	HealthTextComponent->SetTextRenderColor(color.ToFColor(true));
-	HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), Health)));
+	HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), HealthComponent->GetHealth())));
 }

@@ -27,13 +27,14 @@ void UMSWeaponComponent::Fire()
 	CurrentWeapon->Fire();
 }
 
+
 void UMSWeaponComponent::SpawnWeapon()
 {
-	if (!GetWorld())
-		return;
-
 	ACharacter* Owner = Cast<ACharacter>(GetOwner());
 	if (!Owner)
+		return;
+
+	if (!GetWorld())
 		return;
 
 	CurrentWeapon = GetWorld()->SpawnActor<AMSBaseWeapon>(WeaponClass);
@@ -42,4 +43,5 @@ void UMSWeaponComponent::SpawnWeapon()
 
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, false);
 	CurrentWeapon->AttachToComponent(Owner->GetMesh(), AttachmentRules, WeaponAttachPointName);
+	CurrentWeapon->SetOwner(Owner);
 }
