@@ -11,13 +11,19 @@
 #include "Components/MSWeaponComponent.h"
 #include <Components/CapsuleComponent.h>
 #include "Player/MSPlayerController.h"
+#include "Weapon/MSBaseWeapon.h"
+
+#include <Net/UnrealNetwork.h>
+#include <Engine/Engine.h>
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseCharacter, All, All)
 
 AMSBaseCharacter::AMSBaseCharacter()
 {
+	GetCapsuleComponent()->InitCapsuleSize(42.0f, 96.0f);
+
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>("SpringArmComponent");
 	SpringArmComponent->SetupAttachment(GetRootComponent());
 	SpringArmComponent->bUsePawnControlRotation = true;
@@ -27,30 +33,59 @@ AMSBaseCharacter::AMSBaseCharacter()
 	CameraComponent->SetupAttachment(SpringArmComponent);
 
 	HealthComponent = CreateDefaultSubobject<UMSHealthComponent>("HealtComponent");
+	HealthComponent->SetIsReplicated(true);
+
 	HealthTextComponent = CreateDefaultSubobject<UTextRenderComponent>("HealthTextComponent");
 	HealthTextComponent->SetupAttachment(GetRootComponent());
-	//HealthTextComponent->SetOnlyOwnerSee(true);
+	HealthTextComponent->SetIsReplicated(true);
 
 	WeaponComponent = CreateDefaultSubobject<UMSWeaponComponent>("WeaponComponent");
+	WeaponComponent->SetIsReplicated(true);
+
+	bReplicates = true;
 }
 
-void AMSBaseCharacter::BeginPlay()
+
+void AMSBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::BeginPlay();
-	
-	check(HealthComponent);
-	check(HealthTextComponent);
-	check(GetCharacterMovement());
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMSBaseCharacter, HealthTextComponent);
+	DOREPLIFETIME(AMSBaseCharacter, HealthComponent);
+	DOREPLIFETIME(AMSBaseCharacter, WeaponComponent);
+}
+
+
+void AMSBaseCharacter::OnRep_HealthChanged()
+{
+	OnHealthChanged();
+}
+
+
+void AMSBaseCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	check(WeaponComponent);
+
+	if (HasAuthority())
+	{
+		WeaponComponent->SpawnWeapon();
+	}
+
+	check(HealthComponent)
 
 	OnHealthChanged();
 	HealthComponent->OnDeath.AddUObject(this, &AMSBaseCharacter::OnDeath);
 	HealthComponent->OnHealthChanged.AddUObject(this, &AMSBaseCharacter::OnHealthChanged);
 }
 
+
 void AMSBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
+
 
 void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -68,27 +103,29 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, WeaponComponent, &UMSWeaponComponent::Fire);
 }
 
+
 void AMSBaseCharacter::MoveForward(float Amount)
 {
 	AddMovementInput(GetActorForwardVector(), Amount);
 }
+
 
 void AMSBaseCharacter::MoveRight(float Amount)
 {
     AddMovementInput(GetActorRightVector(), Amount);
 }
 
+
 void AMSBaseCharacter::OnDeath()
 {
 	GetCharacterMovement()->DisableMovement();
 	
-	FText text = FText::FromString(TEXT("DEAD"));
-
-	HealthTextComponent->SetText(text);
+	HealthTextComponent->SetText(FText::FromString(TEXT("DEAD")));
 	HealthTextComponent->SetTextRenderColor(FColor::Red);
 	HealthTextComponent->SetOnlyOwnerSee(false);
 
 	SetLifeSpan(1.5f);
+	WeaponComponent->GetWeapon()->SetLifeSpan(1.5f);
 
 	if (Controller)
 	{
@@ -97,6 +134,7 @@ void AMSBaseCharacter::OnDeath()
 
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 }
+
 
 void AMSBaseCharacter::OnHealthChanged()
 {

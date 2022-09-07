@@ -19,6 +19,12 @@ public:
 
 	virtual void Fire();
 
+	virtual void Reload();
+
+	virtual void Aim();
+
+	FORCEINLINE bool CanFire() { return CurrentAmmo > 0 && (GetWorld()->GetTimeSeconds() - LastFireTime) >= FireCooldown; }
+
 protected:
 	
 	virtual void BeginPlay() override;
@@ -34,6 +40,23 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float DamageAmount = 8.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float FireCooldown = 0.5f;
+
+	UPROPERTY(VisibleAnywhere)
+	float LastFireTime = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 HolderAmmo = 30;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 CurrentAmmo;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 AllAmmo = 120;
+
+protected:
 
 	void MakeShot();
 

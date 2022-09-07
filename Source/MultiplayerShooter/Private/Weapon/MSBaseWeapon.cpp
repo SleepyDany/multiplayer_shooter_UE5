@@ -8,6 +8,7 @@
 #include <GameFramework/Character.h>
 #include <GameFramework/Controller.h>
 #include <Kismet/GameplayStatics.h>
+#include <Net/UnrealNetwork.h>
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseWeapon, All, All)
 
@@ -17,17 +18,48 @@ AMSBaseWeapon::AMSBaseWeapon()
 
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponMesh");
 	SetRootComponent(WeaponMesh);
+
+	bReplicates = true;
+	//bNetUseOwnerRelevancy = true;
+
+	CurrentAmmo = HolderAmmo;
+	FireCooldown = 0.05f;
+	LastFireTime = TNumericLimits<float>::Lowest();
 }
+
+//
+//void AMSBaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+//{
+//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//
+//	DOREPLIFETIME(AMSBaseWeapon, LastHitResult);
+//}
+//
+//
+//void AMSBaseWeapon::OnRep_MakeDamage()
+//{
+//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("OnRep_MakeDamage")));
+//}
+
 
 void AMSBaseWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
+
 void AMSBaseWeapon::Fire()
 {
-	MakeShot();
+	if (CurrentAmmo > 0)
+	{
+		MakeShot();
+	}
+	else
+	{
+		// sound|visuals effects
+	}
 }
+
 
 void AMSBaseWeapon::MakeShot()
 {
@@ -55,6 +87,7 @@ void AMSBaseWeapon::MakeShot()
 	}
 }
 
+
 APlayerController* AMSBaseWeapon::GetPlayerController() const
 {
 	const auto Player = Cast<ACharacter>(GetOwner());
@@ -63,6 +96,7 @@ APlayerController* AMSBaseWeapon::GetPlayerController() const
 
 	return Player->GetController<APlayerController>();
 }
+
 
 bool AMSBaseWeapon::GetPlayerViewPoint(FVector& ViewLocation, FRotator& ViewRotation) const
 {
@@ -74,10 +108,12 @@ bool AMSBaseWeapon::GetPlayerViewPoint(FVector& ViewLocation, FRotator& ViewRota
 	return true;
 }
 
+
 FVector AMSBaseWeapon::GetMuzzleWorldLocation() const
 {
 	return WeaponMesh->GetSocketLocation(MuzzleSocketName);
 }
+
 
 bool AMSBaseWeapon::GetTraceData(FVector& TraceStart, FVector& TraceEnd) const
 {
@@ -93,6 +129,7 @@ bool AMSBaseWeapon::GetTraceData(FVector& TraceStart, FVector& TraceEnd) const
 	return true;
 }
 
+
 void AMSBaseWeapon::MakeHit(FHitResult& HitResult, FVector& TraceStart, FVector& TraceEnd) const
 {
 	if (!GetWorld())
@@ -104,11 +141,42 @@ void AMSBaseWeapon::MakeHit(FHitResult& HitResult, FVector& TraceStart, FVector&
 	GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
 }
 
+
 void AMSBaseWeapon::MakeDamage(FHitResult& HitResult)
 {
 	AActor* DamagedActor = HitResult.GetActor();
-	if (!DamagedActor)
+	if (!DamagedActor || DamagedActor == GetOwner())
 		return;
-	
+
+	//if (HasAuthority())
+	//{
+		FString damageMessage = FString::Printf(TEXT("MakeDamage. DamagedChar:%s, Weapon: %s, This: %s, NetOwner: %s"), *(DamagedActor->GetName()), *GetName(), *GetOwner()->GetName(), *GetNetOwner()->GetName());
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, damageMessage);
+	//}
+	//else
+	//{
+		//FString damageMessage = FString::Printf(TEXT("Char %s get %f damage from local char %s with %s weapon. Role: %d"), *(DamagedActor->GetName()), DamageAmount, *(GetOwner()->GetName()), *GetName(), GetLocalRole());
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, damageMessage);
+	//}
+
+	//if (GetLocalRole() == ROLE_Authority)
+	//{
+	//	FString damageMessage = FString::Printf(TEXT("Char %s get %f damage from char %s with %s weapon. Role: %d"), *(DamagedActor->GetName()), DamageAmount, *(GetOwner()->GetName()), *GetName(), GetLocalRole());
+	//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, damageMessage);
+	//}
+
 	DamagedActor->TakeDamage(DamageAmount, FDamageEvent(), GetPlayerController(), this);
+	//}
+}
+
+
+void AMSBaseWeapon::Reload()
+{
+	
+}
+
+
+void AMSBaseWeapon::Aim()
+{
+
 }

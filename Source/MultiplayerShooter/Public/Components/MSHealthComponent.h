@@ -18,34 +18,36 @@ public:
 
 	UMSHealthComponent();
 
-	float GetHealth() const { return Health; }
-	void SetHealth(float HealthValue);
-
-	float GetMaxHealth() const { return MaxHealth; }
-	//void SetMaxHealth(float MaxHealthValue);
-
-	UFUNCTION(BlueprintCallable)
-	bool IsDead() const { return Health <= 0.0f; }
-
 	FOnDeath OnDeath;
 	FOnHealthChanged OnHealthChanged;
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	FORCEINLINE float GetHealth() const { return Health; }
+
+	void SetHealth(float HealthValue);
+
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsDead() const { return Health <= 0.0f; }
 
 protected:
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Health", ReplicatedUsing = OnRep_Health, meta = (ClampMin = "0.0", ClampMax = "1000.0"))
-	float MaxHealth = 100.0f;
-
 	virtual void BeginPlay() override;
 
-private:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "0.0", ClampMax = "1000.0"))
+	float MaxHealth = 100.0f;
 
+	UPROPERTY(ReplicatedUsing = OnRep_HealthChanged)
 	float Health = 0.0f;
+
+	UFUNCTION()
+	void OnRep_HealthChanged();
+
+private:
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 
     UFUNCTION()
     void OnTakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
-
-	UFUNCTION()
-	void OnRep_Health();
 };

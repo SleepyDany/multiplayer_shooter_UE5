@@ -6,9 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "MSGameModeBase.generated.h"
 
-/**
- *
- */
+
 UCLASS()
 class MULTIPLAYERSHOOTER_API AMSGameModeBase : public AGameModeBase
 {

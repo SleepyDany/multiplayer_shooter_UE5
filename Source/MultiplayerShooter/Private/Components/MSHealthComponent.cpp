@@ -3,6 +3,9 @@
 
 #include "Components/MSHealthComponent.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Character.h"
+#include "Player/MSBaseCharacter.h"
+
 #include <Engine/Engine.h>
 #include <Net/UnrealNetwork.h>
 
@@ -11,7 +14,16 @@ DEFINE_LOG_CATEGORY_STATIC(LogHealthComponent, All, All)
 UMSHealthComponent::UMSHealthComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	Health = MaxHealth;
+	OnHealthChanged.Broadcast();
+
+	if (GetOwner())
+	{
+		GetOwner()->OnTakeAnyDamage.AddDynamic(this, &UMSHealthComponent::OnTakeAnyDamage);
+	}
 }
+
 
 void UMSHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -20,24 +32,19 @@ void UMSHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UMSHealthComponent, Health);
 }
 
-void UMSHealthComponent::OnRep_Health()
+
+void UMSHealthComponent::OnRep_HealthChanged()
 {
-	OnHealthChanged.Broadcast();
+	const auto Owner = Cast<AMSBaseCharacter>(GetOwner());
+	Owner->OnRep_HealthChanged();
 }
+
 
 void UMSHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	Health = MaxHealth;
-	OnHealthChanged.Broadcast();
-
-	AActor* ComponentOwner = GetOwner();
-	if (ComponentOwner)
-	{
-		ComponentOwner->OnTakeAnyDamage.AddDynamic(this, &UMSHealthComponent::OnTakeAnyDamage);
-	}
 }
+
 
 void UMSHealthComponent::OnTakeAnyDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
@@ -52,11 +59,13 @@ void UMSHealthComponent::OnTakeAnyDamage(AActor* DamagedActor, float Damage, con
 	}
 }
 
+
 void UMSHealthComponent::SetHealth(float HealthValue)
 {
-	if (GetOwner()->GetLocalRole() == ROLE_Authority)
-	{
-		Health = FMath::Clamp(HealthValue, 0.0f, MaxHealth);
-		OnHealthChanged.Broadcast();
-	}
+	Health = FMath::Clamp(HealthValue, 0.0f, MaxHealth);
+
+	FString healthMessage = FString::Printf(TEXT("SetHealth. Char: %s, set new health: %.0f"), *GetOwner()->GetName(), Health);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+
+	OnHealthChanged.Broadcast();
 }

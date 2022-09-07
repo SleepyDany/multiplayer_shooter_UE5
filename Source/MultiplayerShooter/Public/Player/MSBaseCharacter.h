@@ -21,9 +21,12 @@ public:
 
 	AMSBaseCharacter();
 
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION()
+	void OnRep_HealthChanged();
+
 protected:
-	
-	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
 	UCameraComponent* CameraComponent;
@@ -31,13 +34,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
 	USpringArmComponent* SpringArmComponent;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Components")
+    UPROPERTY(EditDefaultsOnly, Category = "Components", ReplicatedUsing = OnRep_HealthChanged)
 	UMSHealthComponent* HealthComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", ReplicatedUsing = OnRep_HealthChanged)
 	UTextRenderComponent* HealthTextComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", Replicated)
 	UMSWeaponComponent* WeaponComponent;
 
 public:	
@@ -45,6 +48,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	virtual void PostInitializeComponents() override;
 
 private:
 

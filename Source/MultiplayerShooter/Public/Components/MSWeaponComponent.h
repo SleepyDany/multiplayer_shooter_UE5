@@ -17,11 +17,17 @@ public:
 
 	UMSWeaponComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE AMSBaseWeapon* GetWeapon() const { return CurrentWeapon; }
+
+	void SpawnWeapon();
+
+	UFUNCTION(Server, Reliable)
 	void Fire();
 
 protected:
-
-	virtual void BeginPlay() override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<AMSBaseWeapon> WeaponClass;
@@ -31,8 +37,6 @@ protected:
 
 private:
 
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	AMSBaseWeapon* CurrentWeapon = nullptr;
-
-	void SpawnWeapon();
 };
