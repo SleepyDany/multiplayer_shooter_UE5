@@ -9,6 +9,7 @@
 #include <GameFramework/Controller.h>
 #include <Kismet/GameplayStatics.h>
 #include <Net/UnrealNetwork.h>
+#include "Player/MSBaseCharacter.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseWeapon, All, All)
 
@@ -19,27 +20,19 @@ AMSBaseWeapon::AMSBaseWeapon()
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponMesh");
 	SetRootComponent(WeaponMesh);
 
-	bReplicates = true;
-	//bNetUseOwnerRelevancy = true;
-
 	CurrentAmmo = HolderAmmo;
-	FireCooldown = 0.05f;
-	LastFireTime = TNumericLimits<float>::Lowest();
+
+	bReplicates = true;
 }
 
-//
-//void AMSBaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-//{
-//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//
-//	DOREPLIFETIME(AMSBaseWeapon, LastHitResult);
-//}
-//
-//
-//void AMSBaseWeapon::OnRep_MakeDamage()
-//{
-//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("OnRep_MakeDamage")));
-//}
+
+void AMSBaseWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMSBaseWeapon, CurrentAmmo);
+	DOREPLIFETIME(AMSBaseWeapon, AllAmmo);
+}
 
 
 void AMSBaseWeapon::BeginPlay()
@@ -48,16 +41,19 @@ void AMSBaseWeapon::BeginPlay()
 }
 
 
-void AMSBaseWeapon::Fire()
+void AMSBaseWeapon::StartFire()
 {
-	if (CurrentAmmo > 0)
-	{
-		MakeShot();
-	}
-	else
-	{
-		// sound|visuals effects
-	}
+	if (!CanFire())
+		return;
+
+	MakeShot();
+	GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AMSBaseWeapon::MakeShot, FireRate, true);
+}
+
+
+void AMSBaseWeapon::StopFire()
+{
+	GetWorldTimerManager().ClearTimer(FireTimerHandle);
 }
 
 
@@ -65,26 +61,84 @@ void AMSBaseWeapon::MakeShot()
 {
 	if (!GetWorld())
 		return;
-	
+
+	if (!CanFire())
+	{
+		StopFire();
+		return;
+	}
+
+	--CurrentAmmo;
+
 	FVector TraceStart, TraceEnd;
 
 	if (!GetTraceData(TraceStart, TraceEnd))
 		return;
-	
+
 	FHitResult HitResult;
 	MakeHit(HitResult, TraceStart, TraceEnd);
+	DrawLineTrace(HitResult, TraceStart, TraceEnd);
 
 	if (HitResult.bBlockingHit)
 	{
-		DrawDebugLine(GetWorld(), GetMuzzleWorldLocation(), HitResult.ImpactPoint, FColor::Orange, false, 3.0f, 0, 2.0f);
-		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 5.0f, 24, FColor::Red, false, 3.0f, 0, 2.0f);
-
 		MakeDamage(HitResult);
 	}
-	else
+}
+
+
+void AMSBaseWeapon::MakeHit(FHitResult& HitResult, FVector& TraceStart, FVector& TraceEnd) const
+{
+	if (!GetWorld())
+		return;
+
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.AddIgnoredActor(GetOwner());
+
+	GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
+}
+
+
+void AMSBaseWeapon::MakeDamage(FHitResult& HitResult)
+{
+	AActor* DamagedActor = HitResult.GetActor();
+	if (!DamagedActor || DamagedActor == GetOwner())
+		return;
+
+	DamagedActor->TakeDamage(DamageAmount, FDamageEvent(), GetPlayerController(), this);
+}
+
+
+void AMSBaseWeapon::OnRep_AmmoChanged_Implementation()
+{
+	const auto ActorOwner = Cast<AMSBaseCharacter>(Owner);
+
+	if (!ActorOwner)
+		return;
+
+	ActorOwner->OnRep_AmmoChanged();
+}
+
+
+void AMSBaseWeapon::Reload()
+{
+	if (FireTimerHandle.IsValid())
 	{
-		DrawDebugLine(GetWorld(), GetMuzzleWorldLocation(), TraceEnd, FColor::Orange, false, 3.0f, 0, 2.0f);
+		StopFire();
 	}
+
+	if (CurrentAmmo < HolderAmmo && AllAmmo > 0)
+	{
+		const int32 AvailableAmmo = AllAmmo >= HolderAmmo - CurrentAmmo ? HolderAmmo - CurrentAmmo : AllAmmo;
+		CurrentAmmo += AvailableAmmo;
+
+		AllAmmo -= AvailableAmmo;
+	}
+}
+
+
+void AMSBaseWeapon::Aim()
+{
+
 }
 
 
@@ -123,60 +177,22 @@ bool AMSBaseWeapon::GetTraceData(FVector& TraceStart, FVector& TraceEnd) const
 		return false;
 
 	TraceStart = ViewLocation;
-	const FVector TraceDirection = ViewRotation.Vector();
+	const auto HalfRadSpread = FMath::DegreesToRadians(BullerSpread);
+	const FVector TraceDirection = FMath::VRandCone(ViewRotation.Vector(), HalfRadSpread);
 	TraceEnd = TraceStart + TraceDirection * TraceMaxDistance;
 	
 	return true;
 }
 
-
-void AMSBaseWeapon::MakeHit(FHitResult& HitResult, FVector& TraceStart, FVector& TraceEnd) const
+void AMSBaseWeapon::DrawLineTrace(const FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd) const
 {
-	if (!GetWorld())
-		return;
-
-	FCollisionQueryParams CollisionParams;
-	CollisionParams.AddIgnoredActor(GetOwner());
-
-	GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
-}
-
-
-void AMSBaseWeapon::MakeDamage(FHitResult& HitResult)
-{
-	AActor* DamagedActor = HitResult.GetActor();
-	if (!DamagedActor || DamagedActor == GetOwner())
-		return;
-
-	//if (HasAuthority())
-	//{
-		FString damageMessage = FString::Printf(TEXT("MakeDamage. DamagedChar:%s, Weapon: %s, This: %s, NetOwner: %s"), *(DamagedActor->GetName()), *GetName(), *GetOwner()->GetName(), *GetNetOwner()->GetName());
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, damageMessage);
-	//}
-	//else
-	//{
-		//FString damageMessage = FString::Printf(TEXT("Char %s get %f damage from local char %s with %s weapon. Role: %d"), *(DamagedActor->GetName()), DamageAmount, *(GetOwner()->GetName()), *GetName(), GetLocalRole());
-		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, damageMessage);
-	//}
-
-	//if (GetLocalRole() == ROLE_Authority)
-	//{
-	//	FString damageMessage = FString::Printf(TEXT("Char %s get %f damage from char %s with %s weapon. Role: %d"), *(DamagedActor->GetName()), DamageAmount, *(GetOwner()->GetName()), *GetName(), GetLocalRole());
-	//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, damageMessage);
-	//}
-
-	DamagedActor->TakeDamage(DamageAmount, FDamageEvent(), GetPlayerController(), this);
-	//}
-}
-
-
-void AMSBaseWeapon::Reload()
-{
-	
-}
-
-
-void AMSBaseWeapon::Aim()
-{
-
+	if (HitResult.bBlockingHit)
+	{
+		DrawDebugLine(GetWorld(), GetMuzzleWorldLocation(), HitResult.ImpactPoint, FColor::Orange, false, 3.0f, 0, 2.0f);
+		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 5.0f, 24, FColor::Red, false, 3.0f, 0, 2.0f);
+	}
+	else
+	{
+		DrawDebugLine(GetWorld(), GetMuzzleWorldLocation(), TraceEnd, FColor::Orange, false, 3.0f, 0, 2.0f);
+	}
 }

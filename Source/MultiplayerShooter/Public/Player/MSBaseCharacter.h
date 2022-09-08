@@ -26,6 +26,9 @@ public:
 	UFUNCTION()
 	void OnRep_HealthChanged();
 
+	UFUNCTION()
+	void OnRep_AmmoChanged();
+
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
@@ -43,6 +46,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", Replicated)
 	UMSWeaponComponent* WeaponComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", Replicated = OnRep_AmmoChanged)
+	UTextRenderComponent* WeaponTextComponent;
+
 public:	
 	
 	virtual void Tick(float DeltaTime) override;
@@ -58,4 +64,6 @@ private:
 
 	void OnDeath();
 	void OnHealthChanged();
+
+	void OnAmmoChanged();
 };

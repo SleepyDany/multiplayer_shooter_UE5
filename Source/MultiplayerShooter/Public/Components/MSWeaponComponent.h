@@ -8,6 +8,8 @@
 
 class AMSBaseWeapon;
 
+DECLARE_MULTICAST_DELEGATE(FOnAmmoChanged)
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MULTIPLAYERSHOOTER_API UMSWeaponComponent : public UActorComponent
 {
@@ -24,8 +26,26 @@ public:
 
 	void SpawnWeapon();
 
+	//UFUNCTION(Server, Reliable)
+	//void BeginFire();
+
 	UFUNCTION(Server, Reliable)
-	void Fire();
+	void StartFire();
+
+	UFUNCTION(Server, Reliable)
+	void StopFire();
+
+	UFUNCTION(Server, Reliable)
+	void Reload();
+
+	FOnAmmoChanged OnAmmoChanged;
+
+	int32 GetCurrentAmmo() const;
+
+	int32 GetAllAmmo() const;
+
+	UFUNCTION()
+	void Aim();
 
 protected:
 

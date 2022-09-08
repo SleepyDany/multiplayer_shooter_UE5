@@ -17,13 +17,25 @@ public:
 	
 	AMSBaseWeapon();
 
-	virtual void Fire();
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+
+	virtual void StartFire();
+
+	virtual void StopFire();
 
 	virtual void Reload();
 
 	virtual void Aim();
 
-	FORCEINLINE bool CanFire() { return CurrentAmmo > 0 && (GetWorld()->GetTimeSeconds() - LastFireTime) >= FireCooldown; }
+	FORCEINLINE bool CanFire() { return CurrentAmmo > 0 && !bIsOnReload; }
+
+	FORCEINLINE bool IsOnAim() { return bIsOnAim; }
+
+	FORCEINLINE bool IsOnReload() { return bIsOnReload; }
+
+	FORCEINLINE int32 GetCurrentAmmo() const { return CurrentAmmo; }
+
+	FORCEINLINE int32 GetAllAmmo() const { return AllAmmo; }
 
 protected:
 	
@@ -41,22 +53,33 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float DamageAmount = 8.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float FireCooldown = 0.5f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	float FireRate = 0.1f;
 
 	UPROPERTY(VisibleAnywhere)
-	float LastFireTime = 0.f;
+	float BullerSpread = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 HolderAmmo = 30;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_AmmoChanged)
 	int32 CurrentAmmo;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_AmmoChanged)
 	int32 AllAmmo = 120;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void OnRep_AmmoChanged();
+
+	UPROPERTY(VisibleAnywhere)
+	bool bIsOnAim = false;
+
+	UPROPERTY(VisibleAnywhere)
+	bool bIsOnReload = false;
+
 protected:
+
+	FTimerHandle FireTimerHandle;
 
 	void MakeShot();
 
@@ -71,4 +94,6 @@ protected:
 	void MakeHit(FHitResult& HitResult, FVector& TraceStart, FVector& TraceEnd) const;
 
 	void MakeDamage(FHitResult& HitResult);
+
+	void DrawLineTrace(const FHitResult& FHitResult, const FVector& TraceStart, const FVector& TraceEnd) const;
 };

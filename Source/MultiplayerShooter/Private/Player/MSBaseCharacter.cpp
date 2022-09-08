@@ -20,7 +20,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogBaseCharacter, All, All)
 
 AMSBaseCharacter::AMSBaseCharacter()
 {
-	GetCapsuleComponent()->InitCapsuleSize(42.0f, 96.0f);
+	GetCapsuleComponent()->InitCapsuleSize(42.0f, 86.0f);
 
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -42,6 +42,10 @@ AMSBaseCharacter::AMSBaseCharacter()
 	WeaponComponent = CreateDefaultSubobject<UMSWeaponComponent>("WeaponComponent");
 	WeaponComponent->SetIsReplicated(true);
 
+	WeaponTextComponent = CreateDefaultSubobject<UTextRenderComponent>("WeaponTextComponent");
+	WeaponTextComponent->SetupAttachment(GetRootComponent());
+	WeaponTextComponent->SetIsReplicated(true);
+
 	bReplicates = true;
 }
 
@@ -53,12 +57,19 @@ void AMSBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME(AMSBaseCharacter, HealthTextComponent);
 	DOREPLIFETIME(AMSBaseCharacter, HealthComponent);
 	DOREPLIFETIME(AMSBaseCharacter, WeaponComponent);
+	DOREPLIFETIME(AMSBaseCharacter, WeaponTextComponent);
 }
 
 
 void AMSBaseCharacter::OnRep_HealthChanged()
 {
 	OnHealthChanged();
+}
+
+
+void AMSBaseCharacter::OnRep_AmmoChanged()
+{
+	OnAmmoChanged();
 }
 
 
@@ -72,6 +83,10 @@ void AMSBaseCharacter::PostInitializeComponents()
 	{
 		WeaponComponent->SpawnWeapon();
 	}
+
+	OnAmmoChanged();
+	WeaponComponent->OnAmmoChanged.AddUObject(this, &AMSBaseCharacter::OnAmmoChanged);
+
 
 	check(HealthComponent)
 
@@ -99,8 +114,16 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis("LookUp", this, &AMSBaseCharacter::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("TurnAround", this, &AMSBaseCharacter::AddControllerYawInput);
 
+
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMSBaseCharacter::Jump);
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, WeaponComponent, &UMSWeaponComponent::Fire);
+
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, WeaponComponent, &UMSWeaponComponent::StartFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, WeaponComponent, &UMSWeaponComponent::StopFire);
+
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, WeaponComponent, &UMSWeaponComponent::Reload);
+
+	PlayerInputComponent->BindAction("Aim", IE_Pressed, WeaponComponent, &UMSWeaponComponent::Aim);
+	PlayerInputComponent->BindAction("Aim", IE_Released, WeaponComponent, &UMSWeaponComponent::Aim);
 }
 
 
@@ -119,10 +142,6 @@ void AMSBaseCharacter::MoveRight(float Amount)
 void AMSBaseCharacter::OnDeath()
 {
 	GetCharacterMovement()->DisableMovement();
-	
-	HealthTextComponent->SetText(FText::FromString(TEXT("DEAD")));
-	HealthTextComponent->SetTextRenderColor(FColor::Red);
-	HealthTextComponent->SetOnlyOwnerSee(false);
 
 	SetLifeSpan(1.5f);
 	WeaponComponent->GetWeapon()->SetLifeSpan(1.5f);
@@ -133,15 +152,36 @@ void AMSBaseCharacter::OnDeath()
 	}
 
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+	
 }
 
 
 void AMSBaseCharacter::OnHealthChanged()
 {
-	const float color_param = HealthComponent->GetHealth() / HealthComponent->GetMaxHealth();
+	if (HealthComponent->GetHealth() > 0)
+	{
+		const float color_param = HealthComponent->GetHealth() / HealthComponent->GetMaxHealth();
 
-	FLinearColor color = FLinearColor::Red * (1 - color_param) + FLinearColor::Green * color_param;
+		FLinearColor color = FLinearColor::Red * (1 - color_param) + FLinearColor::Green * color_param;
 
-	HealthTextComponent->SetTextRenderColor(color.ToFColor(true));
-	HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), HealthComponent->GetHealth())));
+		HealthTextComponent->SetTextRenderColor(color.ToFColor(true));
+		HealthTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%.0f"), HealthComponent->GetHealth())));
+	}
+	else
+	{
+		HealthTextComponent->SetText(FText::FromString(TEXT("DEAD")));
+		HealthTextComponent->SetTextRenderColor(FColor::Red);
+		HealthTextComponent->SetOnlyOwnerSee(false);
+
+		OnDeath();
+	}
+}
+
+void AMSBaseCharacter::OnAmmoChanged()
+{
+	const int32 CurrentAmmo = WeaponComponent->GetCurrentAmmo();
+	const int32 AllAmmo = WeaponComponent->GetAllAmmo();
+
+	WeaponTextComponent->SetTextRenderColor(FColor::Orange);
+	WeaponTextComponent->SetText(FText::FromString(FString::Printf(TEXT("%d / %d"), CurrentAmmo, AllAmmo)));
 }

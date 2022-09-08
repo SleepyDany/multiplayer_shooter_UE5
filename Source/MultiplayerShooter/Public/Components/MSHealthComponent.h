@@ -31,6 +31,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsDead() const { return Health <= 0.0f; }
 
+	void Killed(AController* KillerController);
+
 protected:
 
 	virtual void BeginPlay() override;

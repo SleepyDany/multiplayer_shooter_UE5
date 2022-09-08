@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "Player/MSBaseCharacter.h"
+#include "MSGameModeBase.h"
 
 #include <Engine/Engine.h>
 #include <Net/UnrealNetwork.h>
@@ -55,6 +56,7 @@ void UMSHealthComponent::OnTakeAnyDamage(AActor* DamagedActor, float Damage, con
 
 	if (IsDead())
 	{
+		Killed(InstigatedBy);
 		OnDeath.Broadcast();
 	}
 }
@@ -64,8 +66,21 @@ void UMSHealthComponent::SetHealth(float HealthValue)
 {
 	Health = FMath::Clamp(HealthValue, 0.0f, MaxHealth);
 
-	FString healthMessage = FString::Printf(TEXT("SetHealth. Char: %s, set new health: %.0f"), *GetOwner()->GetName(), Health);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
-
 	OnHealthChanged.Broadcast();
+}
+
+
+void UMSHealthComponent::Killed(AController* KillerController)
+{
+	if (!GetWorld())
+		return;
+
+	const auto GameMode = Cast<AMSGameModeBase>(GetWorld()->GetAuthGameMode());
+	if (!GameMode)
+		return;
+
+	const auto Player = Cast<APawn>(GetOwner());
+	const auto VictimController = Player ? Player->Controller : nullptr;
+
+	GameMode->Killed(KillerController, VictimController);
 }
