@@ -69,6 +69,7 @@ void AMSBaseWeapon::MakeShot()
 	}
 
 	--CurrentAmmo;
+	OnRep_AmmoChanged();
 
 	FVector TraceStart, TraceEnd;
 

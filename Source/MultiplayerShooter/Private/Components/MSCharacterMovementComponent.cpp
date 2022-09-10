@@ -9,4 +9,3 @@ float UMSCharacterMovementComponent::GetMaxSpeed() const
     
     return MaxSpeed;
 }
-

@@ -11,6 +11,7 @@ class USpringArmComponent;
 class UMSHealthComponent;
 class UTextRenderComponent;
 class UMSWeaponComponent;
+class UMSCharacterMovementComponent;
 
 UCLASS()
 class MULTIPLAYERSHOOTER_API AMSBaseCharacter : public ACharacter
@@ -61,6 +62,8 @@ private:
 
 	void MoveForward(float Amount);
 	void MoveRight(float Amount);
+
+	void Run(float Amount);
 
 	void OnDeath();
 	void OnHealthChanged();

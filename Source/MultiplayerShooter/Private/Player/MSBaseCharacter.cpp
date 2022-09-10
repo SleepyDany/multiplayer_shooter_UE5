@@ -127,6 +127,12 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 }
 
 
+void AMSBaseCharacter::Run(float Amount)
+{
+
+}
+
+
 void AMSBaseCharacter::MoveForward(float Amount)
 {
 	AddMovementInput(GetActorForwardVector(), Amount);
