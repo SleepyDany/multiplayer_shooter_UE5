@@ -117,6 +117,9 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMSBaseCharacter::Jump);
 
+	PlayerInputComponent->BindAction("Walk", IE_Pressed, this, &AMSBaseCharacter::StartWalk);
+	PlayerInputComponent->BindAction("Walk", IE_Released, this, &AMSBaseCharacter::StopWalk);
+
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, WeaponComponent, &UMSWeaponComponent::StartFire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, WeaponComponent, &UMSWeaponComponent::StopFire);
 
@@ -127,9 +130,27 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 }
 
 
-void AMSBaseCharacter::Run(float Amount)
+void AMSBaseCharacter::StartWalk()
 {
+	auto Movement = GetCharacterMovement();
+	Movement->MaxWalkSpeed /= 2;
 
+	IntendToWalk = true;
+}
+
+
+void AMSBaseCharacter::StopWalk()
+{
+	auto Movement = GetCharacterMovement();
+	Movement->MaxWalkSpeed *= 2;
+
+	IntendToWalk = false;
+}
+
+
+bool AMSBaseCharacter::IsWalking() const
+{
+	return IntendToWalk && !GetVelocity().IsZero();
 }
 
 

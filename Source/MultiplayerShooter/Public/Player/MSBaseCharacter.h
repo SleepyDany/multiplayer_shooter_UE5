@@ -50,6 +50,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", Replicated = OnRep_AmmoChanged)
 	UTextRenderComponent* WeaponTextComponent;
 
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	bool IsWalking() const;
+
 public:	
 	
 	virtual void Tick(float DeltaTime) override;
@@ -63,7 +66,9 @@ private:
 	void MoveForward(float Amount);
 	void MoveRight(float Amount);
 
-	void Run(float Amount);
+	bool IntendToWalk = false;
+	void StartWalk();
+	void StopWalk();
 
 	void OnDeath();
 	void OnHealthChanged();
