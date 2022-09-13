@@ -20,7 +20,7 @@ class MULTIPLAYERSHOOTER_API AMSBaseCharacter : public ACharacter
 
 public:
 
-	AMSBaseCharacter();
+	AMSBaseCharacter(const FObjectInitializer& ObjInit);
 
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -50,9 +50,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components", Replicated = OnRep_AmmoChanged)
 	UTextRenderComponent* WeaponTextComponent;
 
-	UFUNCTION(BlueprintCallable, Category = "Movement")
-	bool IsWalking() const;
-
 public:	
 	
 	virtual void Tick(float DeltaTime) override;
@@ -60,6 +57,12 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void PostInitializeComponents() override;
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	bool IsWalking() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	float GetMovementDirection() const;
 
 private:
 

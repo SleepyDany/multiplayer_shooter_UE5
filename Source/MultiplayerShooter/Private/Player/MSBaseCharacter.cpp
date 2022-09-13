@@ -18,7 +18,8 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogBaseCharacter, All, All)
 
-AMSBaseCharacter::AMSBaseCharacter()
+AMSBaseCharacter::AMSBaseCharacter(const FObjectInitializer& ObjInit) : 
+	Super(ObjInit.SetDefaultSubobjectClass<UMSCharacterMovementComponent>(AMSBaseCharacter::CharacterMovementComponentName))
 {
 	GetCapsuleComponent()->InitCapsuleSize(42.0f, 86.0f);
 
@@ -132,8 +133,8 @@ void AMSBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 void AMSBaseCharacter::StartWalk()
 {
-	auto Movement = GetCharacterMovement();
-	Movement->MaxWalkSpeed /= 2;
+	//auto Movement = GetCharacterMovement();
+	//Movement->MaxWalkSpeed /= 2;
 
 	IntendToWalk = true;
 }
@@ -141,8 +142,8 @@ void AMSBaseCharacter::StartWalk()
 
 void AMSBaseCharacter::StopWalk()
 {
-	auto Movement = GetCharacterMovement();
-	Movement->MaxWalkSpeed *= 2;
+	//auto Movement = GetCharacterMovement();
+	//Movement->MaxWalkSpeed *= 2;
 
 	IntendToWalk = false;
 }
@@ -154,14 +155,35 @@ bool AMSBaseCharacter::IsWalking() const
 }
 
 
+float AMSBaseCharacter::GetMovementDirection() const
+{
+	if (GetVelocity().IsZero())
+		return 0.0f;
+
+	const auto VelocityNormal = GetVelocity().GetSafeNormal();
+	const auto ForwardNormal = GetActorForwardVector();
+
+	const auto Angle = FMath::Acos(FVector::DotProduct(VelocityNormal, ForwardNormal));
+	const auto DirectionCoef = FMath::Sign(FVector::CrossProduct(ForwardNormal, VelocityNormal).Z);
+
+	return FMath::RadiansToDegrees(Angle) * DirectionCoef;
+}
+
+
 void AMSBaseCharacter::MoveForward(float Amount)
 {
+	if (Amount == 0.0f)
+		return;
+
 	AddMovementInput(GetActorForwardVector(), Amount);
 }
 
 
 void AMSBaseCharacter::MoveRight(float Amount)
 {
+	if (Amount == 0.0f)
+		return;
+
     AddMovementInput(GetActorRightVector(), Amount);
 }
 

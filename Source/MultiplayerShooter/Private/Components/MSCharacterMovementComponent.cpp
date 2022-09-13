@@ -2,10 +2,12 @@
 
 
 #include "Components/MSCharacterMovementComponent.h"
+#include "Player/MSBaseCharacter.h"
 
 float UMSCharacterMovementComponent::GetMaxSpeed() const
 {
     const float MaxSpeed = Super::GetMaxSpeed();
+    const AMSBaseCharacter* Player = Cast<AMSBaseCharacter>(GetPawnOwner());
     
-    return MaxSpeed;
+    return Player && Player->IsWalking() ? MaxSpeed * WalkModifier : MaxSpeed;
 }
